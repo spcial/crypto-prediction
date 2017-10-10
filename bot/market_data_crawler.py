@@ -1,37 +1,74 @@
-import tornado.escape, tornado.httpclient
+#!/usr/bin/python
 
+import tornado.escape, tornado.httpclient
+import tornado.httpclient
+from tornado import gen
+import time
+from collections import defaultdict
+
+
+@gen.coroutine
 def update_market_data_for_basecoin(basecoin):
     global market_data
-    market_data = {}
+    market_data = defaultdict(list)
     market_requests = []
 
-    """Bittrex"""
+    @gen.coroutine
+    def call_market_data(url, response_handler):
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        response = yield http_client.fetch(url)
+        return response_handler(response)
 
+    """
+    Bittrex
+    """
     def handle_response_bittrex(response):
         if response.error:
             print("Error: %s" % response.error)
+            return False
+
         else:
+            print("Response received from Bittrex - handling now!")
             response_data = tornado.escape.json_decode(response.body)
 
             for market in response_data["result"]:
                 base, target = market["MarketName"].split("-")
                 if base == basecoin:
-                    market_data.update({
-                        target: {
-                            "Bittrex": market["Last"]
-                        }
-                    })
+                    market_data[target].append({"Bittrex": market["Last"]})
+
+            return True
+
+    market_requests.append(
+        call_market_data(
+            "https://bittrex.com/api/v1.1/public/getmarketsummaries",
+            handle_response_bittrex))
+
+    """
+    Poloniex
+    """
+    def handle_response_poloniex(response):
+        if response.error:
+            print("Error: %s" % response.error)
+            return False
+
+        else:
+            print("Response received from Poloniex - handling now!")
+            response_data = tornado.escape.json_decode(response.body)
+
+            for market in response_data:
+                base, target = market.split("_")
+                if base == basecoin:
+                    market_data[target].append({"Poloniex": response_data[market]["last"]})
 
 
-    bittrex = {
-        "url": "https://bittrex.com/api/v1.1/public/getmarketsummaries",
-        "response_handler": handle_response_bittrex
-    }
+            return True
 
-    market_requests.append(bittrex)
+    market_requests.append(
+        call_market_data(
+            "https://poloniex.com/public?command=returnTicker",
+            handle_response_poloniex))
 
-    http_client = tornado.httpclient.AsyncHTTPClient()
-    for request in market_requests:
-        print("Doing request to {0}".format(request["url"]))
-        http_client.fetch(request["url"], request["response_handler"])
-
+    print("--- Retrieve market data now ---")
+    start_time = time.time()
+    response_dict = yield market_requests
+    print("--- Marked data updated in {0} seconds. Responses: {1} ---".format(time.time() - start_time, response_dict))

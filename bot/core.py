@@ -1,13 +1,15 @@
 #!/usr/bin/python
-from . import helpers
+from . import market_data_crawler
 
-from tornado import httpserver
 from tornado import gen
 from tornado.ioloop import IOLoop
 import tornado.web
 import json
+import sys
+
 
 class MainHandler(tornado.web.RequestHandler):
+    @gen.coroutine
     def post(self):
         print("POST received from IP {0}".format(self.request.remote_ip))
 
@@ -21,10 +23,19 @@ class MainHandler(tornado.web.RequestHandler):
 
         if "command" in request:
             print("Command received: {0}".format(request["command"]))
-            response["msg"] = "All good - command received"
+
+            if request["command"] == "init_market_data":
+                yield self.update_market_data(request, response)
 
         self.write(json.dumps(response))
 
+    @gen.coroutine
+    def update_market_data(self, request, response):
+        yield market_data_crawler.update_market_data_for_basecoin(request["basecoin"])
+        response["msg"] = "Market Data initialized"
+        response["data"] = market_data_crawler.market_data
+
+    @gen.coroutine
     def delete(self):
         print("Stopping server...")
 
@@ -42,9 +53,9 @@ class Application(tornado.web.Application):
         tornado.web.Application.__init__(self, handlers)
 
 
-def main():
+def main(port):
     app = Application()
-    app.listen(666)
+    app.listen(port)
     IOLoop.instance().start()
 
 
@@ -53,5 +64,6 @@ def exists():
 
 
 if __name__ == '__main__':
-        print("Starting arbitrage bot...")
-        main()
+        port = int(sys.argv[1])
+        print("Starting arbitrage bot on port {0}...".format(port))
+        main(port)
