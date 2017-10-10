@@ -1,1 +1,0 @@
-README of crypto arbitrage bot
