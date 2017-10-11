@@ -1,16 +1,17 @@
 #!/usr/bin/python
 
-import tornado.escape, tornado.httpclient
+import tornado.escape
+import tornado.httpclient
 import tornado.httpclient
 from tornado import gen
 import time
 from collections import defaultdict
 
+market_data = defaultdict(list)
+
 
 @gen.coroutine
 def update_market_data_for_basecoin(basecoin):
-    global market_data
-    market_data = defaultdict(list)
     market_requests = []
 
     @gen.coroutine
@@ -133,7 +134,6 @@ def update_market_data_for_basecoin(basecoin):
         call_market_data(
             "https://api.bitfinex.com/v2/tickers?symbols=tETHBTC,tIOTETH,tEOSETH,tSANETH,tOMGETH,tQTMETH,tAVTETH,tETPETH,tNEOETH,tBCHETH",
             handle_response_bitfinex))
-
 
     print("--- Retrieve market data now ---")
     start_time = time.time()
