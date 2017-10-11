@@ -68,6 +68,35 @@ def update_market_data_for_basecoin(basecoin):
             "https://poloniex.com/public?command=returnTicker",
             handle_response_poloniex))
 
+    """
+        Kraken
+    """
+    def handle_response_kraken(response):
+        if response.error:
+            print("Error: %s" % response.error)
+            return False
+
+        else:
+            print("Response received from Kraken - handling now!")
+            response_data = tornado.escape.json_decode(response.body)
+            import re
+
+            for market in response_data["result"]:
+                base = "ETH"
+                target = re.findall('XBT|EOS|GNO|ETC|ICN|REP|MLN', market, re.DOTALL)
+
+                if base == basecoin:
+                    market_data[target[0]].append({"Kraken": response_data["result"][market]["c"][0]})
+
+            return True
+
+    market_requests.append(
+        call_market_data(
+            "https://api.kraken.com/0/public/Ticker?pair=ETHXBT,EOSETH,GNOETH,ETCETH,ICNETH,REPETH,MLNETH",
+            handle_response_kraken))
+
+
+
     print("--- Retrieve market data now ---")
     start_time = time.time()
     response_dict = yield market_requests
