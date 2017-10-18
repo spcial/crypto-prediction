@@ -1,7 +1,6 @@
 #!/usr/bin/python
-
-from tornado import gen
 from collections import defaultdict
+from bot.shared_config import *
 
 import sys
 import time
@@ -11,49 +10,7 @@ import ccxt.async as ccxt
 market_data = defaultdict(list)
 
 
-def style(s, style):
-    return style + s + '\033[0m'
-
-
-def green(s):
-    return style(s, '\033[92m')
-
-
-def blue(s):
-    return style(s, '\033[94m')
-
-
-def yellow(s):
-    return style(s, '\033[93m')
-
-
-def red(s):
-    return style(s, '\033[91m')
-
-
-def pink(s):
-    return style(s, '\033[95m')
-
-
-def bold(s):
-    return style(s, '\033[1m')
-
-
-def underline(s):
-    return style(s, '\033[4m')
-
-
-def dump(*args):
-    print(' '.join([str(arg) for arg in args]))
-
-proxies = [
-    '',  # no proxy by default
-    'https://cors-anywhere.herokuapp.com/',
-
-]
-
-
-def update_market_data_for_symbol_and_exchange(allowed_symbols, exchanges):
+def update_market_data_for_symbol_and_exchange(exchanges):
     if len(exchanges) > 1:
         start_time = time.time()
         ids = list(exchanges)
@@ -77,16 +34,19 @@ def update_market_data_for_symbol_and_exchange(allowed_symbols, exchanges):
         # filter out symbols that are not present on at least two exchanges
         arbitrableSymbols = sorted([symbol for symbol in uniqueSymbols if allSymbols.count(symbol) > 1])
 
+        # filter out symbols which have a different basecoin
+        arbitrableSymbols = sorted([symbol for symbol in arbitrableSymbols if '/'+basecoin in symbol])
+
         dump(yellow('Loading'), 'order books for following exchanges:', ' '.join(ids))
         exchanges = fetch_all_order_books(exchanges, arbitrableSymbols)
 
         dump(green('Finished!'), 'Responsetime:', red("{:.2f}ms".format((time.time() - start_time) * 100)))
 
         with open("market_data.txt", "w") as file:
-            for key, value in market_data.items():
-                file.write("\nMarket: {}".format(key))
+            for exchange_name, order_books in market_data.items():
+                file.write("\nMarket: {}".format(exchange_name))
 
-                for order_book in value:
+                for order_book in order_books:
                     file.write("\n    Order Book: {0}".format(order_book))
 
         return market_data
@@ -138,9 +98,9 @@ def fetch_all_order_books(exchanges, arbitrableSymbols):
         market_data[exchange.id] = order_books
 
     async_executor = []
-    for key, value in exchanges.items():
+    for exchange_name, exchange in exchanges.items():
         # add future to list
-        async_executor.append(asyncio.ensure_future(fetch_single_order_books(exchanges[key], arbitrableSymbols)))
+        async_executor.append(asyncio.ensure_future(fetch_single_order_books(exchange, arbitrableSymbols)))
 
     # wait till all futures in list completed
     asyncio.get_event_loop().run_until_complete(asyncio.gather(*async_executor))
@@ -183,9 +143,9 @@ def fetch_all_markets(exchanges):
         dump(' ', green(exchange.id), 'loaded', green(str(len(exchange.symbols))), 'markets')
 
     async_executor = []
-    for key, value in exchanges.items():
+    for exchange_name, exchange in exchanges.items():
         # add future to list
-        async_executor.append(asyncio.ensure_future(fetch_single_market(exchanges[key])))
+        async_executor.append(asyncio.ensure_future(fetch_single_market(exchange)))
 
     # wait till all futures in list completed
     asyncio.get_event_loop().run_until_complete(asyncio.gather(*async_executor))
@@ -196,4 +156,4 @@ def fetch_all_markets(exchanges):
 
 
 if __name__ == '__main__':
-    update_market_data_for_symbol_and_exchange(None, sys.argv[1:])
+    update_market_data_for_symbol_and_exchange(sys.argv[1:])
