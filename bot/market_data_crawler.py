@@ -59,8 +59,6 @@ def update_market_data_for_symbol_and_exchange(allowed_symbols, exchanges):
         ids = list(exchanges)
         exchanges = {}
 
-        dump(yellow('Loading'), 'market data for following exchanges:', ' '.join(ids))
-
         for id in ids:
             # instantiate the exchange by id
             exchange = getattr(ccxt, id)()
@@ -68,6 +66,7 @@ def update_market_data_for_symbol_and_exchange(allowed_symbols, exchanges):
             # save it in a dictionary under its id for future use
             exchanges[id] = exchange
 
+        dump(yellow('Loading'), 'market data for following exchanges:', ' '.join(ids))
         exchanges = fetch_all_markets(exchanges)
 
         allSymbols = [symbol for id in ids for symbol in exchanges[id].symbols]
@@ -78,6 +77,7 @@ def update_market_data_for_symbol_and_exchange(allowed_symbols, exchanges):
         # filter out symbols that are not present on at least two exchanges
         arbitrableSymbols = sorted([symbol for symbol in uniqueSymbols if allSymbols.count(symbol) > 1])
 
+        dump(yellow('Loading'), 'order books for following exchanges:', ' '.join(ids))
         exchanges = fetch_all_order_books(exchanges, arbitrableSymbols)
 
         dump(green('Finished!'), 'Responsetime:', red("{:.2f}ms".format((time.time() - start_time) * 100)))
@@ -99,8 +99,6 @@ def fetch_all_order_books(exchanges, arbitrableSymbols):
     ob_start_time = time.time()
 
     async def fetch_single_order_books(exchange, arbitrableSymbols):
-        dump(yellow('Retrieving'), 'order books from exchange', yellow(exchange.id))
-
         order_books = []
         available_symbols = (symbol for symbol in arbitrableSymbols if symbol in exchange.symbols)
 
@@ -136,7 +134,7 @@ def fetch_all_order_books(exchanges, arbitrableSymbols):
                 except Exception as e:  # reraise all other exceptions
                     raise
 
-        dump("Order book for", yellow(str(exchange.id)), "retrieved in", red("{:.2f}ms".format((time.time() - ob_start_time) * 100)))
+        dump(' ', green(exchange.id), 'loaded', green(str(len(order_books))), 'order books in', red("{:.2f}ms".format((time.time() - ob_start_time) * 100)))
         market_data[exchange.id] = order_books
 
     async_executor = []
@@ -163,7 +161,6 @@ def fetch_all_markets(exchanges):
             currentProxy = (currentProxy + 1) % len(proxies)
 
             try:  # try to load exchange markets using current proxy
-
                 exchange.proxy = proxies[currentProxy]
                 await exchange.load_markets()
                 break
@@ -183,7 +180,7 @@ def fetch_all_markets(exchanges):
             except Exception as e:  # reraise all other exceptions
                 raise
 
-        dump(green(exchange.id), 'loaded', green(str(len(exchange.symbols))), 'markets')
+        dump(' ', green(exchange.id), 'loaded', green(str(len(exchange.symbols))), 'markets')
 
     async_executor = []
     for key, value in exchanges.items():
