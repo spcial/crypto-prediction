@@ -40,3 +40,5 @@ proxies = [
 ]
 
 basecoin = "ETH"
+
+run_bot = False

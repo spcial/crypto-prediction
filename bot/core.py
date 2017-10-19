@@ -1,12 +1,11 @@
 #!/usr/bin/python
-from . import market_data_crawler, market_data_analyzer
+from . import market_data_crawler, market_data_analyzer, shared_config
 
 from tornado import gen
 from tornado.ioloop import IOLoop
 import tornado.web
 import json
 import sys
-
 
 class MainHandler(tornado.web.RequestHandler):
     @gen.coroutine
@@ -16,7 +15,7 @@ class MainHandler(tornado.web.RequestHandler):
         response = {'error': False, 'msg': "None"}
         request = json.loads(self.request.body.decode('utf-8'))
 
-        if "token" not in request or request["token"] != "abc":
+        if "token" not in request or request["token"] != "den":
             response["msg"] = "Wrong token - no access granted"
             self.write(json.dumps(response))
             return
@@ -24,31 +23,14 @@ class MainHandler(tornado.web.RequestHandler):
         if "command" in request:
             print("Command received: {0}".format(request["command"]))
 
-            if request["command"] == "init_market_data":
-                yield self.update_market_data(request, response)
-            elif request["command"] == "get_market_data":
-                yield self.get_market_data(request, response)
-            elif request["command"] == "calc_arbitr_opport":
-                yield self.update_market_data(request, response)
-                yield self.get_arbitrage_opportunities(request, response)
+            if request["command"] == "start_bot":
+                shared_config.run_bot = True
+            elif request["command"] == "stop_bot":
+                shared_config.run_bot = False
+            else:
+                response["msg"] = "Unknown command"
 
         self.write(json.dumps(response))
-
-    @gen.coroutine
-    def update_market_data(self, request, response):
-        yield market_data_crawler.update_market_data_for_basecoin(request["basecoin"])
-        response["msg"] = "Market Data initialized"
-        response["data"] = market_data_crawler.market_data
-
-    @gen.coroutine
-    def get_market_data(self, request, response):
-        response["msg"] = "Market Data Retrieved"
-        response["data"] = market_data_crawler.market_data
-
-    @gen.coroutine
-    def get_arbitrage_opportunities(self, request, response):
-        response["msg"] = "Arbitrage Oportunities Retrieved"
-        response["data"] = market_data_analyzer.calculate_arbitrage_opportunities(request["basecoin"])
 
     @gen.coroutine
     def delete(self):
@@ -68,14 +50,19 @@ class Application(tornado.web.Application):
         tornado.web.Application.__init__(self, handlers)
 
 
+@gen.coroutine
+def run_bot():
+    while True:
+        yield gen.sleep(30)
+        if shared_config.run_bot:
+            market_data_analyzer.calculate_arbitrage_opportunities(['kraken', 'bitfinex', 'binance', 'hitbtc', 'gdax', 'bittrex', 'poloniex'])
+
+
 def main(port):
     app = Application()
     app.listen(port)
+    run_bot()
     IOLoop.instance().start()
-
-
-def exists():
-    return True
 
 
 if __name__ == '__main__':
