@@ -1,4 +1,4 @@
-nose
-sphinx
-tornado
-ccxt
+numpy
+matplotlib
+tensorflow
+pandas

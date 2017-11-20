@@ -12,13 +12,13 @@ with open('LICENSE') as f:
     license = f.read()
 
 setup(
-    name='sample',
+    name='crypto-tensor',
     version='0.1.0',
-    description='Sample package for Python-Guide.org',
+    description='Package for Crypto-Tensor bot',
     long_description=readme,
-    author='Kenneth Reitz',
-    author_email='me@kennethreitz.com',
-    url='https://github.com/kennethreitz/samplemod',
+    author='Dennis Thiessen',
+    author_email='dennis.thiessen@riskahead.de',
+    url='https://gitlab.riskahead.de/root/crypto-prediction',
     license=license,
     packages=find_packages(exclude=('tests', 'docs'))
 )

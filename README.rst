@@ -1,7 +1,7 @@
-Crypto Arbitrage Bot
+Crypto Tensor Bot
 ========================
 
-This bot does arbitrage with crypto
+This bot predicts a stock shart trend
 
 ---------------
 

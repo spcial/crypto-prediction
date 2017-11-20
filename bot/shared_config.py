@@ -33,12 +33,3 @@ def underline(s):
 
 def dump(*args):
     print(' '.join([str(arg) for arg in args]))
-
-proxies = [
-    '',  # no proxy by default
-    'https://cors-anywhere.herokuapp.com/',
-]
-
-basecoin = "ETH"
-
-run_bot = False
