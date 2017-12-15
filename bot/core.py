@@ -2,11 +2,14 @@
 import time
 import pandas as pd
 import numpy as np
+import datetime as dt
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 import tensorflow as tf
 import urllib.request, json
 
 from bot.shared_config import *
+
 
 def main():
     start_time = time.time()
@@ -29,7 +32,7 @@ def main():
     dump(green("Retrieved API in {0:.3f}ms sec".format((time.time() - start_time)*100)))
     dump(yellow("Initialize Tensorflow"))
 
-    f_horizon = 1  # forecast horizon, one period into the future
+    f_horizon = 10  # forecast horizon, one period into the future
     num_periods = 20  # number of periods per vector we are using to predict one period ahead
     inputs = 2  # number of vectors submitted
     hidden = 100  # number of neurons we will recursively work through, can be changed to improve accuracy
@@ -94,13 +97,24 @@ def main():
 
     dump(yellow("Start Plotting and output"))
 
-    actual_series = pd.Series(np.concatenate([np.ravel(X_test)[::2],np.ravel(Y_test)]))
-    actual_prediction = pd.Series(np.concatenate([np.ravel(X_test)[::2],np.ravel(y_pred)]))
+    actual_series = pd.Series(np.concatenate([np.ravel(X_test)[::2], np.ravel(Y_test)]))
+    actual_prediction = pd.Series(np.concatenate([np.ravel(X_test)[::2], np.ravel(y_pred)]))
 
     plt.title("Forecast vs Actual", fontsize=14)
-    plt.plot(actual_series, "b-", markersize=10, label="Actual")
-    # plt.plot(pd.Series(np.ravel(Y_test)), "w*", markersize=10)
-    plt.plot(actual_prediction, "r-", markersize=7, label="Forecast")
+
+    xfmt = md.DateFormatter('%d.%m %H:%M:%S')
+    plt.subplots_adjust(bottom=0.2)
+    plt.xticks(rotation=25)
+    plt.gca().xaxis.set_major_formatter(xfmt)
+
+    dates = [dt.datetime.fromtimestamp(int(ts)) for ts in timestamps]
+    datenums = md.date2num(dates)
+
+    plt.plot(datenums[-40:], actual_series, "b--", linewidth=1.0, label="Actual")
+    plt.plot(datenums[-40:], actual_prediction, "r--", linewidth=1.0, label="Forecast")
+    plt.plot(datenums[-40:], actual_series.rolling(window=3, center=False).mean(),  "y-", linewidth=2.0, label="Actual MA")
+    plt.plot(datenums[-40:], actual_prediction.rolling(window=3, center=False).mean(),  "g-", linewidth=2.0, label="Predicted MA")
+
     plt.legend(loc="upper left")
     plt.xlabel("Time Periods")
 
